@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: onper-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: onper
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - onper-network
+
+  # NestJS Backend
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: onper-backend
+    restart: unless-stopped
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/onper
+      JWT_SECRET: onper-super-secret-jwt-key-change-in-production
+      PORT: 3000
+      NODE_ENV: production
+      FRONTEND_URL: http://localhost:8080
+    ports:
+      - "3000:3000"
+    depends_on:
+      - postgres
+    networks:
+      - onper-network
+    # volumes removed for production build - uncomment for development with hot-reload
+    # volumes:
+    #   - ./backend:/app
+    #   - /app/node_modules
+
+  # Vue 3 Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: onper-frontend
+    restart: unless-stopped
+    environment:
+      VITE_API_URL: http://localhost:3000
+    ports:
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - onper-network
+    # volumes removed for production build - uncomment for development with hot-reload
+    # volumes:
+    #   - ./frontend:/app
+    #   - /app/node_modules
+
+networks:
+  onper-network:
+    driver: bridge
+
+volumes:
+  postgres_data:
+

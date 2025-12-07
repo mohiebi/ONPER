@@ -1,0 +1,108 @@
+// Prisma Schema for ONPER
+// Database: PostgreSQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - stores user authentication and profile data
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  
+  // Running profile
+  goal         Goal     @default(FULL)
+  level        Level    @default(BEGINNER)
+  
+  // Timestamps
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  trainings        Training[]
+  motivationLogs   MotivationLog[]
+  
+  @@map("users")
+}
+
+// Training session model - tracks individual workouts
+model Training {
+  id          String   @id @default(uuid())
+  userId      String   @map("user_id")
+  
+  // Training details
+  date        DateTime
+  distance    Float    // in kilometers
+  duration    Int      // in minutes
+  mood        Mood     @default(NORMAL)
+  completed   Boolean  @default(false)
+  
+  // Optional notes
+  notes       String?
+  
+  // Timestamps
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+  
+  // Relations
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("trainings")
+  @@index([userId])
+  @@index([date])
+}
+
+// Motivation log - tracks motivational messages sent to users
+model MotivationLog {
+  id        String           @id @default(uuid())
+  userId    String           @map("user_id")
+  
+  // Motivation details
+  trigger   TriggerType
+  message   String
+  
+  // Timestamps
+  createdAt DateTime         @default(now()) @map("created_at")
+  
+  // Relations
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("motivation_logs")
+  @@index([userId])
+  @@index([createdAt])
+}
+
+// Enums
+enum Goal {
+  FIVE_K      @map("5k")
+  TEN_K       @map("10k")
+  HALF        @map("half")
+  FULL        @map("full")
+}
+
+enum Level {
+  BEGINNER    @map("beginner")
+  INTERMEDIATE @map("intermediate")
+  ADVANCED    @map("advanced")
+}
+
+enum Mood {
+  TIRED       @map("tired")
+  NORMAL      @map("normal")
+  ENERGIZED   @map("energized")
+}
+
+enum TriggerType {
+  COMPLETED   @map("completed")
+  MISSED      @map("missed")
+  MILESTONE   @map("milestone")
+  REMINDER    @map("reminder")
+}
+
